@@ -15,13 +15,14 @@
 // * `sql`: statement that was executing
 // * `message`: Describing what failed
 
-define(["trace"], function(trace) {
+define(function(trace) {
     
     var db;
     var ERROR = 1;
     var DEBUG = 2;
 
     var verbosity = DEBUG;
+    var trace = console;
 
     initialize();
 
@@ -57,6 +58,7 @@ define(["trace"], function(trace) {
         selectRow: selectRow,
 
         logVerbosity: logVerbosity,
+        setConsole: setConsole,
         ERROR: ERROR,
         DEBUG: DEBUG
     };
@@ -586,11 +588,19 @@ define(["trace"], function(trace) {
     //      log(ERROR, "Something horrible happened:", error);
     //
     function log(level) {
-        if(level <= verbosity) {
+        if(level <= verbosity && trace) {
             var args = Array.prototype.slice.call(arguments, 1);
             args.unshift("WebSQL:");
-            trace.text(args, "color: purple");
+            if(isFunction(trace.text)) {
+                trace.text(args, "color: purple");
+            } else if(isFunction(trace.log)) {
+                trace.log(args.join(' '));
+            }
         }
+    }
+
+    function setConsole(console) {
+        trace = console;
     }
 
     function rejectError(dfd, error) {
