@@ -1,0 +1,600 @@
+<!DOCTYPE html>  <html> <head>   <title>websql.js</title>   <meta http-equiv="content-type" content="text/html; charset=UTF-8">   <link rel="stylesheet" media="all" href="docco.css" /> </head> <body>   <div id="container">     <div id="background"></div>          <table cellpadding="0" cellspacing="0">       <thead>         <tr>           <th class="docs">             <h1>               websql.js             </h1>           </th>           <th class="code">           </th>         </tr>       </thead>       <tbody>                               <tr id="section-1">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-1">&#182;</a>               </div>               <p>websql.js</p>
+
+<p>(c) 2012 Stepan Riha</p>
+
+<p>Module that wraps asynchronous WebSQL calls with jQuery's Deferred promises.</p>
+
+<p>Promises are <strong>resolved</strong> with the database as the first value.
+Some methods inclode a second value
+(<code>getTables tables[]</code>, <code>rsCallback result</code>, <code>rowCallback result</code> ).</p>
+
+<p>Promises are <strong>rejected</strong> with an error object that may contain one or more of the following:</p>
+
+<ul>
+<li><code>exception</code>: Exception that was thrown</li>
+<li><code>sqlError</code>: Error returned by WebSQL</li>
+<li><code>sql</code>: statement that was executing</li>
+<li><code>message</code>: Describing what failed</li>
+</ul>             </td>             <td class="code">               <div class="highlight"><pre><span class="nx">define</span><span class="p">([</span><span class="s2">&quot;trace&quot;</span><span class="p">],</span> <span class="kd">function</span><span class="p">(</span><span class="nx">trace</span><span class="p">)</span> <span class="p">{</span>
+    
+    <span class="kd">var</span> <span class="nx">db</span><span class="p">;</span>
+    <span class="kd">var</span> <span class="nx">ERROR</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+    <span class="kd">var</span> <span class="nx">DEBUG</span> <span class="o">=</span> <span class="mi">2</span><span class="p">;</span>
+
+    <span class="kd">var</span> <span class="nx">verbosity</span> <span class="o">=</span> <span class="nx">DEBUG</span><span class="p">;</span>
+
+    <span class="nx">initialize</span><span class="p">();</span></pre></div>             </td>           </tr>                               <tr id="section-2">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-2">&#182;</a>               </div>               <h2>Exported functions</h2>
+
+<ul>
+<li><code>openDatabase(name, version, displayName, estimatedSize)</code></li>
+<li><code>changeVersion(db, oldVersion, newVersion, xactCallback)</code></li>
+<li><code>getTables(db)</code>: <code>[{ name, type, sql }]</code></li>
+<li><code>emptyDatabase(db)</code></li>
+<li><code>transaction(db, xactCallback)</code></li>
+<li><code>readTransaction(db, xactCallback)</code></li>
+<li><code>execute(db, sqlStatement(s), args(s), rsCallback)</code>: <code>rsCallback()</code> or <code>resultSet</code></li>
+<li><code>select(db, sqlStatement, args, rsCallback)</code>: <code>rsCallback()</code> or <code>resultSet</code></li>
+<li><code>selectRow(db, sqlStatement, args, rowCallback)</code>: <code>rowCallback()</code> or <code>row</code></li>
+<li><code>logVerbosity(level)</code>: <code>level</code></li>
+<li><code>ERROR</code></li>
+<li><code>DEBUG</code></li>
+</ul>             </td>             <td class="code">               <div class="highlight"><pre>    <span class="k">return</span>  <span class="p">{</span>
+        <span class="nx">logVerbosity</span><span class="o">:</span> <span class="nx">logVerbosity</span><span class="p">,</span>
+
+        <span class="nx">openDatabase</span><span class="o">:</span> <span class="nx">openDatabase</span><span class="p">,</span>
+        <span class="nx">changeVersion</span><span class="o">:</span> <span class="nx">changeVersion</span><span class="p">,</span>
+        <span class="nx">getTables</span><span class="o">:</span> <span class="nx">getTables</span><span class="p">,</span>
+        <span class="nx">emptyDatabase</span><span class="o">:</span> <span class="nx">emptyDatabase</span><span class="p">,</span>
+
+        <span class="nx">transaction</span><span class="o">:</span> <span class="nx">transaction</span><span class="p">,</span>
+        <span class="nx">readTransaction</span><span class="o">:</span> <span class="nx">readTransaction</span><span class="p">,</span>
+
+        <span class="nx">execute</span><span class="o">:</span> <span class="nx">execute</span><span class="p">,</span>
+        <span class="nx">select</span><span class="o">:</span> <span class="nx">select</span><span class="p">,</span>
+        <span class="nx">selectRow</span><span class="o">:</span> <span class="nx">selectRow</span><span class="p">,</span>
+
+        <span class="nx">logVerbosity</span><span class="o">:</span> <span class="nx">logVerbosity</span><span class="p">,</span>
+        <span class="nx">ERROR</span><span class="o">:</span> <span class="nx">ERROR</span><span class="p">,</span>
+        <span class="nx">DEBUG</span><span class="o">:</span> <span class="nx">DEBUG</span>
+    <span class="p">};</span>
+    </pre></div>             </td>           </tr>                               <tr id="section-3">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-3">&#182;</a>               </div>               <h3>openDatabase(name, version, displayName, estimatedSize)</h3>
+
+<p>Calls window.openDatabase()</p>
+
+<p>Returns: deferred promise that resolves with the opened database</p>
+
+<p>Usage:</p>
+
+<pre><code> websql.openDatabase("test", "Test Database", 2 * 1024 * 1024))
+     .then(function(db) {...});
+</code></pre>             </td>             <td class="code">               <div class="highlight"><pre>    <span class="kd">function</span> <span class="nx">openDatabase</span><span class="p">(</span><span class="nx">name</span><span class="p">,</span> <span class="nx">version</span><span class="p">,</span> <span class="nx">displayName</span><span class="p">,</span> <span class="nx">estimatedSize</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">log</span><span class="p">(</span><span class="nx">DEBUG</span><span class="p">,</span> <span class="s2">&quot;openDatabase&quot;</span><span class="p">,</span> <span class="nx">name</span><span class="p">,</span> <span class="nx">version</span><span class="p">,</span> <span class="nx">displayName</span><span class="p">,</span> <span class="nx">estimatedSize</span><span class="p">);</span>
+
+        <span class="kd">var</span> <span class="nx">dfd</span> <span class="o">=</span> <span class="nx">Deferred</span><span class="p">();</span>
+        <span class="k">try</span> <span class="p">{</span>
+            <span class="k">if</span><span class="p">(</span><span class="o">!</span><span class="nb">window</span><span class="p">.</span><span class="nx">openDatabase</span><span class="p">)</span> <span class="p">{</span>
+                <span class="nx">log</span><span class="p">(</span><span class="nx">ERROR</span><span class="p">,</span> <span class="s2">&quot;WebSQL not implemented&quot;</span><span class="p">);</span>
+                <span class="nx">dfd</span><span class="p">.</span><span class="nx">reject</span><span class="p">({</span>
+                    <span class="nx">message</span><span class="o">:</span> <span class="s2">&quot;WebSQL not implemented&quot;</span>
+                <span class="p">});</span>
+            <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+                <span class="kd">var</span> <span class="nx">db</span> <span class="o">=</span> <span class="nb">window</span><span class="p">.</span><span class="nx">openDatabase</span><span class="p">(</span><span class="nx">name</span><span class="p">,</span> <span class="nx">version</span><span class="p">,</span> <span class="nx">displayName</span><span class="p">,</span> <span class="nx">estimatedSize</span><span class="p">,</span>
+                    <span class="kd">function</span><span class="p">(</span><span class="nx">db</span><span class="p">)</span> <span class="p">{</span>
+                        <span class="nx">log</span><span class="p">(</span><span class="nx">DEBUG</span><span class="p">,</span> <span class="s2">&quot;SUCCESS openDatabase&quot;</span><span class="p">,</span> <span class="nx">name</span><span class="p">);</span>
+                        <span class="nx">dfd</span><span class="p">.</span><span class="nx">resolve</span><span class="p">(</span><span class="nx">db</span><span class="p">);</span>
+                    <span class="p">},</span>
+                    <span class="kd">function</span><span class="p">(</span><span class="nx">error</span><span class="p">)</span> <span class="p">{</span>
+                        <span class="nx">dfd</span><span class="p">.</span><span class="nx">reject</span><span class="p">({</span>
+                            <span class="nx">sqlError</span><span class="o">:</span> <span class="nx">error</span>
+                        <span class="p">});</span>
+                    <span class="p">}</span>
+                <span class="p">);</span>
+                <span class="k">if</span><span class="p">(</span><span class="nx">db</span><span class="p">)</span> <span class="p">{</span>
+                    <span class="nx">dfd</span><span class="p">.</span><span class="nx">resolve</span><span class="p">(</span><span class="nx">db</span><span class="p">);</span>
+                <span class="p">}</span>
+            <span class="p">}</span>
+        <span class="p">}</span> <span class="k">catch</span> <span class="p">(</span><span class="nx">err</span><span class="p">)</span> <span class="p">{</span>
+            <span class="nx">log</span><span class="p">(</span><span class="nx">ERROR</span><span class="p">,</span> <span class="s2">&quot;Failed to open database &quot;</span> <span class="o">+</span> <span class="nx">name</span><span class="p">);</span>
+            <span class="nx">dfd</span><span class="p">.</span><span class="nx">reject</span><span class="p">({</span>
+                <span class="nx">message</span><span class="o">:</span> <span class="s2">&quot;Failed to open database &quot;</span> <span class="o">+</span> <span class="nx">name</span><span class="p">,</span>
+                <span class="nx">exception</span><span class="o">:</span> <span class="nx">err</span>
+            <span class="p">});</span>
+        <span class="p">}</span>
+        <span class="k">return</span> <span class="nx">dfd</span><span class="p">.</span><span class="nx">promise</span><span class="p">();</span>
+    <span class="p">}</span>
+    </pre></div>             </td>           </tr>                               <tr id="section-4">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-4">&#182;</a>               </div>               <h3>changeVersion(db, oldVersion, newVersion, xactCallback)</h3>
+
+<p>Calls db.changeVersion(oldVersion, newVersion, xactCallback).</p>
+
+<p>Returns: deferred promise that resolves with the changed database</p>
+
+<p>Usage:</p>
+
+<pre><code> websql.changeVersion(db, "1", "2",
+         function(xact) {
+             xact.executeSQL(...);
+         }
+ ).then(function(db) {...});
+</code></pre>             </td>             <td class="code">               <div class="highlight"><pre>    <span class="kd">function</span> <span class="nx">changeVersion</span><span class="p">(</span><span class="nx">db</span><span class="p">,</span> <span class="nx">oldVersion</span><span class="p">,</span> <span class="nx">newVersion</span><span class="p">,</span> <span class="nx">xactCallback</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">log</span><span class="p">(</span><span class="nx">DEBUG</span><span class="p">,</span> <span class="s2">&quot;openDatabase&quot;</span><span class="p">,</span> <span class="nx">db</span><span class="p">,</span> <span class="nx">oldVersion</span><span class="p">,</span> <span class="nx">newVersion</span><span class="p">,</span> <span class="nx">xactCallback</span><span class="p">);</span>
+
+        <span class="kd">var</span> <span class="nx">dfd</span> <span class="o">=</span> <span class="nx">Deferred</span><span class="p">();</span>
+        <span class="k">try</span> <span class="p">{</span>
+            <span class="k">if</span><span class="p">(</span><span class="o">!</span><span class="nx">isDatabase</span><span class="p">(</span><span class="nx">db</span><span class="p">))</span> <span class="p">{</span>
+                <span class="nx">rejectError</span><span class="p">(</span><span class="nx">dfd</span><span class="p">,</span> <span class="s2">&quot;Database not specified (db=&#39;&quot;</span> <span class="o">+</span> <span class="nx">db</span> <span class="o">+</span> <span class="s2">&quot;&#39;)&quot;</span><span class="p">);</span>
+            <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+                <span class="nx">db</span><span class="p">.</span><span class="nx">changeVersion</span><span class="p">(</span><span class="nx">oldVersion</span><span class="p">,</span> <span class="nx">newVersion</span><span class="p">,</span> <span class="nx">xactCallback</span><span class="p">,</span>
+                    <span class="kd">function</span><span class="p">(</span><span class="nx">error</span><span class="p">)</span> <span class="p">{</span>
+                        <span class="nx">log</span><span class="p">(</span><span class="nx">ERROR</span><span class="p">,</span> <span class="nx">error</span><span class="p">);</span>
+                        <span class="nx">dfd</span><span class="p">.</span><span class="nx">reject</span><span class="p">({</span>
+                            <span class="nx">message</span><span class="o">:</span> <span class="s2">&quot;Failed to change version&quot;</span><span class="p">,</span>
+                            <span class="nx">sqlError</span><span class="o">:</span> <span class="nx">error</span>
+                        <span class="p">});</span>
+                    <span class="p">},</span>
+                    <span class="kd">function</span><span class="p">()</span> <span class="p">{</span>
+                        <span class="nx">log</span><span class="p">(</span><span class="nx">DEBUG</span><span class="p">,</span> <span class="s2">&quot;SUCCESS changeVersion&quot;</span><span class="p">);</span>
+                        <span class="nx">dfd</span><span class="p">.</span><span class="nx">resolve</span><span class="p">(</span><span class="nx">db</span><span class="p">);</span>
+                    <span class="p">}</span>
+                <span class="p">);</span>
+            <span class="p">}</span>
+        <span class="p">}</span> <span class="k">catch</span> <span class="p">(</span><span class="nx">err</span><span class="p">)</span> <span class="p">{</span>
+            <span class="nx">log</span><span class="p">(</span><span class="nx">ERROR</span><span class="p">,</span> <span class="nx">err</span><span class="p">);</span>
+            <span class="nx">dfd</span><span class="p">.</span><span class="nx">reject</span><span class="p">({</span>
+                <span class="nx">message</span><span class="o">:</span> <span class="s2">&quot;Failed changeVersion(db, &#39;&quot;</span> <span class="o">+</span> <span class="nx">oldVersion</span> <span class="o">+</span> <span class="s2">&quot;&#39;, &#39;&quot;</span> <span class="o">+</span> <span class="nx">newVersion</span> <span class="o">+</span> <span class="s2">&quot;&#39;&#39;)&quot;</span><span class="p">,</span>
+                <span class="nx">exception</span><span class="o">:</span> <span class="nx">err</span>
+            <span class="p">});</span>
+        <span class="p">}</span>
+        <span class="k">return</span> <span class="nx">dfd</span><span class="p">.</span><span class="nx">promise</span><span class="p">();</span>
+    <span class="p">}</span></pre></div>             </td>           </tr>                               <tr id="section-5">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-5">&#182;</a>               </div>               <h3>getTables(db)</h3>
+
+<p>Queries the sqlite_master table for user tables</p>
+
+<p>Returns: deferred promise that resolved with an array of table information records</p>
+
+<p>Usage:</p>
+
+<pre><code> websql.getTables(db)
+     .then(function(tables) {
+     for(var i = 0; i &lt; tables.length; i++) {
+         var name = tables[i].name;
+         var sql = tables[i].sql;
+         ...
+     }
+ });
+</code></pre>             </td>             <td class="code">               <div class="highlight"><pre>    <span class="kd">function</span> <span class="nx">getTables</span><span class="p">(</span><span class="nx">db</span><span class="p">)</span> <span class="p">{</span>
+
+        <span class="kd">var</span> <span class="nx">sql</span> <span class="o">=</span> <span class="s2">&quot;SELECT name, type, sql FROM sqlite_master &quot;</span> <span class="o">+</span>
+                    <span class="s2">&quot;WHERE type in (&#39;table&#39;) AND name NOT LIKE &#39;?_?_%&#39; ESCAPE &#39;?&#39;&quot;</span><span class="p">;</span>
+
+        <span class="k">return</span> <span class="nx">select</span><span class="p">(</span><span class="nx">db</span><span class="p">,</span> <span class="nx">sql</span><span class="p">,</span> <span class="kd">function</span><span class="p">(</span><span class="nx">rs</span><span class="p">)</span> <span class="p">{</span>
+            <span class="kd">var</span> <span class="nx">tables</span> <span class="o">=</span> <span class="p">[];</span>
+            <span class="kd">var</span> <span class="nx">rows</span> <span class="o">=</span> <span class="nx">rs</span><span class="p">.</span><span class="nx">rows</span><span class="p">;</span>
+            <span class="k">for</span><span class="p">(</span><span class="kd">var</span> <span class="nx">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="o">&lt;</span> <span class="nx">rows</span><span class="p">.</span><span class="nx">length</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+                <span class="nx">tables</span><span class="p">.</span><span class="nx">push</span><span class="p">(</span><span class="nx">rows</span><span class="p">.</span><span class="nx">item</span><span class="p">(</span><span class="nx">i</span><span class="p">));</span>
+            <span class="p">}</span>
+            <span class="k">return</span> <span class="nx">tables</span><span class="p">;</span>
+        <span class="p">});</span>
+    <span class="p">}</span></pre></div>             </td>           </tr>                               <tr id="section-6">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-6">&#182;</a>               </div>               <h3>emptyDatabase(db)</h3>
+
+<p>Drops all the tables in the database.</p>
+
+<p>Returns: deferred promise that resolved with the emptied database</p>
+
+<p>Usage:</p>
+
+<pre><code> websql.emptyDatabase(db)
+     .then(function(db) {...});
+</code></pre>             </td>             <td class="code">               <div class="highlight"><pre>    <span class="kd">function</span> <span class="nx">emptyDatabase</span><span class="p">(</span><span class="nx">db</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="nx">changeVersion</span><span class="p">(</span><span class="nx">db</span><span class="p">,</span> <span class="nx">db</span><span class="p">.</span><span class="nx">version</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="kd">function</span><span class="p">(</span><span class="nx">xact</span><span class="p">)</span> <span class="p">{</span>
+            <span class="kd">var</span> <span class="nx">sql</span> <span class="o">=</span> <span class="s2">&quot;SELECT name FROM sqlite_master &quot;</span> <span class="o">+</span>
+                        <span class="s2">&quot;WHERE type in (&#39;table&#39;) AND name NOT LIKE &#39;?_?_%&#39; ESCAPE &#39;?&#39;&quot;</span><span class="p">;</span>
+            <span class="nx">xact</span><span class="p">.</span><span class="nx">executeSql</span><span class="p">(</span><span class="nx">sql</span><span class="p">,</span> <span class="p">[],</span> <span class="kd">function</span><span class="p">(</span><span class="nx">xact</span><span class="p">,</span> <span class="nx">rs</span><span class="p">)</span> <span class="p">{</span>
+                <span class="kd">var</span> <span class="nx">rows</span> <span class="o">=</span> <span class="nx">rs</span><span class="p">.</span><span class="nx">rows</span><span class="p">;</span>
+                <span class="k">for</span><span class="p">(</span><span class="kd">var</span> <span class="nx">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="o">&lt;</span> <span class="nx">rows</span><span class="p">.</span><span class="nx">length</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+                    <span class="kd">var</span> <span class="nx">sql</span> <span class="o">=</span> <span class="s2">&quot;DROP TABLE &quot;</span> <span class="o">+</span> <span class="nx">rows</span><span class="p">.</span><span class="nx">item</span><span class="p">(</span><span class="nx">i</span><span class="p">).</span><span class="nx">name</span><span class="p">;</span>
+                    <span class="nx">xact</span><span class="p">.</span><span class="nx">executeSql</span><span class="p">(</span><span class="nx">sql</span><span class="p">);</span>
+                <span class="p">}</span>
+            <span class="p">})</span>   
+        <span class="p">});</span>
+    <span class="p">}</span></pre></div>             </td>           </tr>                               <tr id="section-7">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-7">&#182;</a>               </div>               <h3>transaction(db, xactCallback)</h3>
+
+<p>Calls xactCallback(xact) from within a database transaction</p>
+
+<p>Returns: deferred promise that resolved with the database</p>
+
+<p>Usage:</p>
+
+<pre><code> websql.transaction(db, 
+         function(xact) {
+             xact.executeSQL(...);
+         }
+ ).then(function(db) {...});
+</code></pre>
+
+<p>More usage:</p>
+
+<pre><code> var addressId;
+ var personId;
+
+ function insertPerson(xact) {
+     return xact.executeSql(
+         "INSERT INTO person ...", [...],
+         function(xact, rs) {
+             personId = rs.insertId;
+             insertAddress(xact, personId);
+         }
+     )
+ }
+
+ function insertAddress(xact, personId) {
+     return websql.executeSql(xact,
+         "INSERT INTO address (person, ...) VALUES (?, ...)",
+         [personId, ...],
+         function(xact, rs) {
+             addressId = rs.insertId;
+         }
+     )
+ }
+
+ websql.transaction(db, 
+         function(xact) {
+             insertPerson(xact);
+         }
+ ).then(function(db) {
+     alert("Created person " + personId +
+             " with address " + addressId);
+ });
+</code></pre>             </td>             <td class="code">               <div class="highlight"><pre>    <span class="kd">function</span> <span class="nx">transaction</span><span class="p">(</span><span class="nx">db</span><span class="p">,</span> <span class="nx">xactCallback</span><span class="p">)</span> <span class="p">{</span>
+        <span class="kd">var</span> <span class="nx">dfd</span> <span class="o">=</span> <span class="nx">Deferred</span><span class="p">();</span>
+        <span class="nx">log</span><span class="p">(</span><span class="nx">DEBUG</span><span class="p">,</span> <span class="s2">&quot;transaction: in&quot;</span><span class="p">);</span>
+
+        <span class="k">try</span> <span class="p">{</span>
+            <span class="k">if</span><span class="p">(</span><span class="o">!</span><span class="nx">isDatabase</span><span class="p">(</span><span class="nx">db</span><span class="p">))</span> <span class="p">{</span>
+                <span class="nx">rejectError</span><span class="p">(</span><span class="nx">dfd</span><span class="p">,</span> <span class="s2">&quot;Database not specified (db=&#39;&quot;</span> <span class="o">+</span> <span class="nx">db</span> <span class="o">+</span> <span class="s2">&quot;&#39;)&quot;</span><span class="p">);</span>
+            <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+                <span class="nx">db</span><span class="p">.</span><span class="nx">transaction</span><span class="p">(</span><span class="kd">function</span><span class="p">(</span><span class="nx">xact</span><span class="p">)</span> <span class="p">{</span>
+                        <span class="nx">xactCallback</span><span class="p">(</span><span class="nx">xact</span><span class="p">);</span>
+                    <span class="p">},</span>
+                    <span class="kd">function</span><span class="p">(</span><span class="nx">error</span><span class="p">)</span> <span class="p">{</span>
+                        <span class="kd">var</span> <span class="nx">reason</span> <span class="o">=</span> <span class="p">{</span>
+                            <span class="nx">message</span><span class="o">:</span> <span class="s2">&quot;Failed executing transaction&quot;</span><span class="p">,</span>
+                            <span class="nx">sqlError</span><span class="o">:</span> <span class="nx">error</span>                     
+                        <span class="p">};</span>
+                        <span class="nx">log</span><span class="p">(</span><span class="nx">ERROR</span><span class="p">,</span> <span class="s2">&quot;transaction: error&quot;</span><span class="p">,</span> <span class="nx">reason</span><span class="p">);</span>
+                        <span class="nx">dfd</span><span class="p">.</span><span class="nx">reject</span><span class="p">(</span><span class="nx">reason</span><span class="p">);</span>
+                        <span class="nx">log</span><span class="p">(</span><span class="nx">DEBUG</span><span class="p">,</span> <span class="s2">&quot;transaction: rejected&quot;</span><span class="p">);</span>
+                    <span class="p">},</span>
+                    <span class="kd">function</span><span class="p">()</span> <span class="p">{</span>
+                        <span class="nx">log</span><span class="p">(</span><span class="nx">DEBUG</span><span class="p">,</span> <span class="s2">&quot;transaction: resolving&quot;</span><span class="p">);</span>
+                        <span class="nx">dfd</span><span class="p">.</span><span class="nx">resolve</span><span class="p">(</span><span class="nx">db</span><span class="p">);</span>
+                        <span class="nx">log</span><span class="p">(</span><span class="nx">DEBUG</span><span class="p">,</span> <span class="s2">&quot;transaction: resolved&quot;</span><span class="p">);</span>
+                    <span class="p">}</span>
+                <span class="p">);</span>
+            <span class="p">}</span>
+        <span class="p">}</span> <span class="k">catch</span> <span class="p">(</span><span class="nx">exception</span><span class="p">)</span> <span class="p">{</span>
+            <span class="kd">var</span> <span class="nx">reason</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="nx">message</span><span class="o">:</span> <span class="s2">&quot;Failed calling transaction&quot;</span><span class="p">,</span>
+                <span class="nx">exception</span><span class="o">:</span> <span class="nx">exception</span>
+            <span class="p">};</span>
+            <span class="nx">log</span><span class="p">(</span><span class="nx">ERROR</span><span class="p">,</span> <span class="s2">&quot;transaction: exception&quot;</span><span class="p">,</span> <span class="nx">reason</span><span class="p">);</span>
+            <span class="nx">dfd</span><span class="p">.</span><span class="nx">reject</span><span class="p">(</span><span class="nx">reason</span><span class="p">);</span>
+            <span class="nx">log</span><span class="p">(</span><span class="nx">DEBUG</span><span class="p">,</span> <span class="s2">&quot;transaction: rejected&quot;</span><span class="p">);</span>
+        <span class="p">}</span>
+        <span class="nx">log</span><span class="p">(</span><span class="nx">DEBUG</span><span class="p">,</span> <span class="s2">&quot;transaction: out&quot;</span><span class="p">);</span>
+        <span class="k">return</span> <span class="nx">dfd</span><span class="p">.</span><span class="nx">promise</span><span class="p">();</span>
+    <span class="p">}</span></pre></div>             </td>           </tr>                               <tr id="section-8">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-8">&#182;</a>               </div>               <h3>readTransaction(db, xactCallback)</h3>
+
+<p>Calls xactCallback(xact) from within a database read transaction</p>
+
+<p>Returns: deferred promise that resolved with the database</p>
+
+<p>Usage:</p>
+
+<pre><code> websql.readTransaction(db,
+         function(xact) {
+             xact.executeSQL(...);
+         }
+ ).then(function(db) {...});
+</code></pre>             </td>             <td class="code">               <div class="highlight"><pre>    <span class="kd">function</span> <span class="nx">readTransaction</span><span class="p">(</span><span class="nx">db</span><span class="p">,</span> <span class="nx">xactCallback</span><span class="p">)</span> <span class="p">{</span>
+        <span class="kd">var</span> <span class="nx">dfd</span> <span class="o">=</span> <span class="nx">Deferred</span><span class="p">();</span>
+        <span class="nx">log</span><span class="p">(</span><span class="nx">DEBUG</span><span class="p">,</span> <span class="s2">&quot;readTransaction: in&quot;</span><span class="p">);</span>
+
+        <span class="k">try</span> <span class="p">{</span>
+            <span class="k">if</span><span class="p">(</span><span class="o">!</span><span class="nx">isDatabase</span><span class="p">(</span><span class="nx">db</span><span class="p">))</span> <span class="p">{</span>
+                <span class="nx">rejectError</span><span class="p">(</span><span class="nx">dfd</span><span class="p">,</span> <span class="s2">&quot;Database not specified (db=&#39;&quot;</span> <span class="o">+</span> <span class="nx">db</span> <span class="o">+</span> <span class="s2">&quot;&#39;)&quot;</span><span class="p">);</span>
+            <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+                <span class="nx">db</span><span class="p">.</span><span class="nx">readTransaction</span><span class="p">(</span><span class="kd">function</span><span class="p">(</span><span class="nx">xact</span><span class="p">)</span> <span class="p">{</span>
+                        <span class="nx">xactCallback</span><span class="p">(</span><span class="nx">xact</span><span class="p">);</span>
+                    <span class="p">},</span>
+                    <span class="kd">function</span><span class="p">(</span><span class="nx">error</span><span class="p">)</span> <span class="p">{</span>
+                        <span class="kd">var</span> <span class="nx">reason</span> <span class="o">=</span> <span class="p">{</span>
+                            <span class="nx">message</span><span class="o">:</span> <span class="s2">&quot;Failed executing read transaction&quot;</span><span class="p">,</span>
+                            <span class="nx">sqlError</span><span class="o">:</span> <span class="nx">error</span>                     
+                        <span class="p">};</span>
+                        <span class="nx">log</span><span class="p">(</span><span class="nx">ERROR</span><span class="p">,</span> <span class="s2">&quot;readTransaction: error&quot;</span><span class="p">,</span> <span class="nx">reason</span><span class="p">);</span>
+                        <span class="nx">dfd</span><span class="p">.</span><span class="nx">reject</span><span class="p">(</span><span class="nx">reason</span><span class="p">);</span>
+                        <span class="nx">log</span><span class="p">(</span><span class="nx">DEBUG</span><span class="p">,</span> <span class="s2">&quot;readTransaction: rejected&quot;</span><span class="p">);</span>
+                    <span class="p">},</span>
+                    <span class="kd">function</span><span class="p">()</span> <span class="p">{</span>
+                        <span class="nx">log</span><span class="p">(</span><span class="nx">DEBUG</span><span class="p">,</span> <span class="s2">&quot;readTransaction: resolving&quot;</span><span class="p">);</span>
+                        <span class="nx">dfd</span><span class="p">.</span><span class="nx">resolve</span><span class="p">(</span><span class="nx">db</span><span class="p">);</span>
+                        <span class="nx">log</span><span class="p">(</span><span class="nx">DEBUG</span><span class="p">,</span> <span class="s2">&quot;readTransaction: resolved&quot;</span><span class="p">);</span>
+                    <span class="p">}</span>
+                <span class="p">);</span>
+            <span class="p">}</span>
+        <span class="p">}</span> <span class="k">catch</span> <span class="p">(</span><span class="nx">exception</span><span class="p">)</span> <span class="p">{</span>
+            <span class="kd">var</span> <span class="nx">reason</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="nx">message</span><span class="o">:</span> <span class="s2">&quot;Failed calling readTransaction&quot;</span><span class="p">,</span>
+                <span class="nx">exception</span><span class="o">:</span> <span class="nx">exception</span>
+            <span class="p">};</span>
+            <span class="nx">log</span><span class="p">(</span><span class="nx">ERROR</span><span class="p">,</span> <span class="s2">&quot;readTransaction: exception&quot;</span><span class="p">,</span> <span class="nx">reason</span><span class="p">);</span>
+            <span class="nx">dfd</span><span class="p">.</span><span class="nx">reject</span><span class="p">(</span><span class="nx">reason</span><span class="p">);</span>
+            <span class="nx">log</span><span class="p">(</span><span class="nx">DEBUG</span><span class="p">,</span> <span class="s2">&quot;readTransaction: rejected&quot;</span><span class="p">);</span>
+        <span class="p">}</span>
+        <span class="nx">log</span><span class="p">(</span><span class="nx">DEBUG</span><span class="p">,</span> <span class="s2">&quot;readTransaction: out&quot;</span><span class="p">);</span>
+        <span class="k">return</span> <span class="nx">dfd</span><span class="p">.</span><span class="nx">promise</span><span class="p">();</span>
+    <span class="p">}</span></pre></div>             </td>           </tr>                               <tr id="section-9">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-9">&#182;</a>               </div>               <h3>execute(db, sqlStatement(s), <em>args(s)</em>, <em>rsCallback</em>)</h3>
+
+<p>Convenience method for executing a transaction with a one or more <code>sqlStatement</code>
+with the specified <code>args</code>, calling the <code>rsCallback</code> with the result set(s).</p>
+
+<p>The <code>args</code> and <code>rsCallback</code> are optional.</p>
+
+<ul>
+<li>Passing a <em>single</em> <code>sqlStatement</code> with <code>args</code> that are an <em>array of arrays</em>,
+the statement is executed with each row in the <code>args</code>.</li>
+<li>Passing an array of <code>{ sql, args}</code> objects to <code>sqlStatement</code>
+executes the <code>sql</code> in each row with the row's <code>args</code> or the parameter <code>args</code>.</li>
+</ul>
+
+<p>Returns: deferred promise that resolves with the database and <code>rsCallback</code> result(s)
+or the resultSet(s), if no <code>rsCallback</code> specified.</p>
+
+<p>Usage:</p>
+
+<pre><code> websql.execute(db,
+             "INSERT INTO person (first, last) VALUES (?, ?)",
+             ["John", "Doe"],
+             function(rs) {
+                 console.log("Inserted person", rs.insertId);
+                 return rs.insertId;
+             }
+ ).then(function(db, result) {...});
+</code></pre>
+
+<p>Basic usage:</p>
+
+<pre><code> websql.execute(db, "DELETE FROM person")
+     .then(function(db, resultSet) {...});
+</code></pre>
+
+<p>Other Usage: (single <code>sqlStatement</code> with multiple sets of <code>args</code>)</p>
+
+<pre><code> websql.execute(db,
+             "INSERT INTO person (first, last) VALUES (?, ?)",
+             [
+                 ["John", "Doe"],
+                 ["Jane", "Doe"]
+             ],
+             function(rs) {
+                 console.log("Inserted person", rs.insertId);
+                 return rs.insertId;
+             }
+ ).then(function(db, personId1, personId2) {...});
+</code></pre>
+
+<p>Other Usage: (multiple <code>sqlStatement</code> with multiple sets of <code>args</code>)</p>
+
+<pre><code> websql.execute(db,
+             [{
+                 sql: "UPDATE person SET (first=?, last=?) WHERE id=?",
+                 args: ["Robert", "Smith", 23]
+             }, {
+                 sql: "UPDATE address SET (street=?, city=?, zip=?) WHERE id=?",
+                 args: ["Sesame St.", "Austin", "78758", 45]
+
+             }],
+             function(rs) {
+                 console.log("Updated object: ", rs.rowsAffected);
+                 return rs.rowsAffected;
+             }
+ ).then(function(db, numPersons, numAddresses) {...});
+</code></pre>             </td>             <td class="code">               <div class="highlight"><pre>    <span class="kd">function</span> <span class="nx">execute</span><span class="p">(</span><span class="nx">db</span><span class="p">,</span> <span class="nx">sqlStatement</span><span class="p">,</span> <span class="nx">args</span><span class="p">,</span> <span class="nx">rsCallback</span><span class="p">)</span> <span class="p">{</span>
+        <span class="kd">var</span> <span class="nx">results</span> <span class="o">=</span> <span class="p">[];</span>
+        <span class="kd">var</span> <span class="nx">ctx</span> <span class="o">=</span> <span class="k">this</span><span class="p">;</span>
+        <span class="k">if</span><span class="p">(</span><span class="k">typeof</span><span class="p">(</span><span class="nx">arguments</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span> <span class="o">===</span> <span class="s2">&quot;function&quot;</span><span class="p">)</span> <span class="p">{</span>
+            <span class="nx">rsCallback</span> <span class="o">=</span> <span class="nx">arguments</span><span class="p">[</span><span class="mi">2</span><span class="p">];</span>
+            <span class="nx">args</span> <span class="o">=</span> <span class="kc">undefined</span><span class="p">;</span>
+        <span class="p">}</span>
+
+        <span class="kd">function</span> <span class="nx">execCommand</span><span class="p">(</span><span class="nx">xact</span><span class="p">,</span> <span class="nx">sql</span><span class="p">,</span> <span class="nx">args</span><span class="p">)</span> <span class="p">{</span>
+            <span class="nx">xact</span><span class="p">.</span><span class="nx">executeSql</span><span class="p">(</span><span class="nx">sqlStatement</span><span class="p">,</span> <span class="nx">args</span> <span class="o">||</span> <span class="p">[],</span> <span class="kd">function</span><span class="p">(</span><span class="nx">xact</span><span class="p">,</span> <span class="nx">rs</span><span class="p">)</span> <span class="p">{</span>
+                <span class="nx">results</span><span class="p">.</span><span class="nx">push</span><span class="p">(</span><span class="nx">rsCallback</span> <span class="o">?</span> <span class="nx">rsCallback</span><span class="p">(</span><span class="nx">rs</span><span class="p">)</span> <span class="o">:</span> <span class="nx">rs</span><span class="p">);</span>
+            <span class="p">});</span>                            
+        <span class="p">}</span>
+
+        <span class="k">return</span> <span class="nx">transaction</span><span class="p">(</span><span class="nx">db</span><span class="p">,</span> <span class="kd">function</span><span class="p">(</span><span class="nx">xact</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">if</span><span class="p">(</span><span class="nx">isArray</span><span class="p">(</span><span class="nx">sqlStatement</span><span class="p">))</span> <span class="p">{</span>
+                <span class="k">for</span><span class="p">(</span><span class="kd">var</span> <span class="nx">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="o">&lt;</span> <span class="nx">sqlStatement</span><span class="p">.</span><span class="nx">length</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+                    <span class="kd">var</span> <span class="nx">cmnd</span> <span class="o">=</span> <span class="nx">sqlStatement</span><span class="p">[</span><span class="nx">i</span><span class="p">];</span>
+                    <span class="nx">execCommand</span><span class="p">(</span><span class="nx">xact</span><span class="p">,</span> <span class="nx">cmnd</span><span class="p">.</span><span class="nx">sql</span><span class="p">,</span> <span class="nx">isUndefined</span><span class="p">(</span><span class="nx">cmnd</span><span class="p">.</span><span class="nx">args</span><span class="p">)</span>
+                                            <span class="o">?</span> <span class="nx">args</span> <span class="o">:</span> <span class="nx">cmnd</span><span class="p">.</span><span class="nx">args</span><span class="p">);</span>
+                <span class="p">}</span>
+            <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+                <span class="kd">var</span> <span class="nx">argSets</span> <span class="o">=</span> <span class="nx">isArray</span><span class="p">(</span><span class="nx">args</span><span class="p">)</span> <span class="o">&amp;&amp;</span> <span class="nx">isArray</span><span class="p">(</span><span class="nx">args</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+                        <span class="o">?</span> <span class="nx">args</span> <span class="o">:</span> <span class="p">[</span><span class="nx">args</span><span class="p">];</span>
+                <span class="k">for</span><span class="p">(</span><span class="kd">var</span> <span class="nx">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="o">&lt;</span> <span class="nx">argSets</span><span class="p">.</span><span class="nx">length</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+                    <span class="nx">execCommand</span><span class="p">(</span><span class="nx">xact</span><span class="p">,</span> <span class="nx">sqlStatement</span><span class="p">,</span> <span class="nx">argSets</span><span class="p">[</span><span class="nx">i</span><span class="p">]);</span>
+                <span class="p">}</span>
+            <span class="p">}</span>
+        <span class="p">}).</span><span class="nx">pipe</span><span class="p">(</span><span class="kd">function</span><span class="p">(</span><span class="nx">db</span><span class="p">)</span> <span class="p">{</span>
+            <span class="nx">results</span><span class="p">.</span><span class="nx">unshift</span><span class="p">(</span><span class="nx">db</span><span class="p">);</span>
+            <span class="k">return</span> <span class="nx">Deferred</span><span class="p">().</span><span class="nx">resolveWith</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">results</span><span class="p">);</span>
+        <span class="p">},</span> <span class="kd">function</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span> <span class="p">{</span>
+            <span class="nx">err</span><span class="p">.</span><span class="nx">sql</span> <span class="o">=</span> <span class="nx">sqlStatement</span>
+        <span class="p">})</span>
+    <span class="p">}</span></pre></div>             </td>           </tr>                               <tr id="section-10">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-10">&#182;</a>               </div>               <h3>select(db, sqlStatement, <em>args</em>, <em>rsCallback</em>)</h3>
+
+<p>Convenience method for executing a readTransaction with a single <code>sqlStatement</code>
+with the specified <code>args</code>.
+The <code>rsCallback</code> is called with the queried result set.</p>
+
+<p>The <code>args</code> and <code>rsCallback</code> are optional.</p>
+
+<p>Returns: deferred promise that resolves with the database and <code>rsCallback</code> result
+or the resultSet, if no <code>rsCallback</code> specified.</p>
+
+<p>Usage:</p>
+
+<pre><code> websql.select(db,
+             "SELECT * FROM person WHERE first = ?",
+             ["Bob"],
+             function(rs) {
+                 var rows = rs.rows;
+                 for(var i = 0; i &lt; rows.length; i++) {
+                     ...
+                 }
+                 return result;
+             }
+ ).then(function(db, result) {...});
+</code></pre>
+
+<p>Other usage:</p>
+
+<pre><code> websql.select(db,
+             "SELECT * FROM person WHERE first = ?",
+             ["Bob"]
+ ).then(function(db, resultSet) {...});
+</code></pre>             </td>             <td class="code">               <div class="highlight"><pre>    <span class="kd">function</span> <span class="nx">select</span><span class="p">(</span><span class="nx">db</span><span class="p">,</span> <span class="nx">sqlStatement</span><span class="p">,</span> <span class="nx">args</span><span class="p">,</span> <span class="nx">rsCallback</span><span class="p">)</span> <span class="p">{</span>
+        <span class="kd">var</span> <span class="nx">result</span><span class="p">;</span>
+        <span class="k">if</span><span class="p">(</span><span class="k">typeof</span><span class="p">(</span><span class="nx">arguments</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span> <span class="o">===</span> <span class="s2">&quot;function&quot;</span><span class="p">)</span> <span class="p">{</span>
+            <span class="nx">rsCallback</span> <span class="o">=</span> <span class="nx">arguments</span><span class="p">[</span><span class="mi">2</span><span class="p">];</span>
+            <span class="nx">args</span> <span class="o">=</span> <span class="kc">undefined</span><span class="p">;</span>
+        <span class="p">}</span>
+        <span class="k">return</span> <span class="nx">readTransaction</span><span class="p">(</span><span class="nx">db</span><span class="p">,</span> <span class="kd">function</span><span class="p">(</span><span class="nx">xact</span><span class="p">)</span> <span class="p">{</span>
+            <span class="nx">xact</span><span class="p">.</span><span class="nx">executeSql</span><span class="p">(</span><span class="nx">sqlStatement</span><span class="p">,</span> <span class="nx">args</span><span class="p">,</span> <span class="kd">function</span><span class="p">(</span><span class="nx">xact</span><span class="p">,</span> <span class="nx">rs</span><span class="p">)</span> <span class="p">{</span>
+                <span class="nx">result</span> <span class="o">=</span> <span class="nx">rsCallback</span> <span class="o">?</span> <span class="nx">rsCallback</span><span class="p">(</span><span class="nx">rs</span><span class="p">)</span> <span class="o">:</span> <span class="nx">rs</span><span class="p">;</span>
+            <span class="p">});</span>
+        <span class="p">}).</span><span class="nx">pipe</span><span class="p">(</span><span class="kd">function</span><span class="p">(</span><span class="nx">db</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">return</span> <span class="nx">Deferred</span><span class="p">().</span><span class="nx">resolve</span><span class="p">(</span><span class="nx">db</span><span class="p">,</span> <span class="nx">result</span><span class="p">);</span>
+        <span class="p">},</span> <span class="kd">function</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span> <span class="p">{</span>
+            <span class="nx">err</span><span class="p">.</span><span class="nx">sql</span> <span class="o">=</span> <span class="nx">sqlStatement</span>
+        <span class="p">})</span>
+    <span class="p">}</span></pre></div>             </td>           </tr>                               <tr id="section-11">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-11">&#182;</a>               </div>               <h3>selectRow(db, sqlStatement, <em>args</em>, <em>rowCallback</em>)</h3>
+
+<p>Convenience method for executing a readTransaction with a single <code>sqlStatement</code>
+that's expected to return a single row.
+The specified <code>rowCallback</code> is called with the <em>first</em> row in the resultset
+or with <code>undefined</code> if resolutSet contains no rows.</p>
+
+<p>The <code>args</code> and <code>rowCallback</code> are optional.</p>
+
+<p>Returns: deferred promise that resolves with the database and <code>rowCallback</code> result
+or the row, if no <code>rowCallback</code> specified.</p>
+
+<p>Usage:</p>
+
+<pre><code> websql.selectRow(db,
+             "SELECT * FROM person WHERE id = ?",
+             [123],
+             function(row) {
+                 if(!row) {
+                     // person not found
+                     return;
+                 }
+                 var login = row.login;
+                 ...
+                 return result;
+             }
+ ).then(function(db, result) {...});
+</code></pre>
+
+<p>Other Usage:</p>
+
+<pre><code> websql.selectRow(db,
+             "SELECT * FROM person WHERE id = ?",
+             [123]
+ ).then(function(db, row) {...});
+</code></pre>             </td>             <td class="code">               <div class="highlight"><pre>    <span class="kd">function</span> <span class="nx">selectRow</span><span class="p">(</span><span class="nx">db</span><span class="p">,</span> <span class="nx">sqlStatement</span><span class="p">,</span> <span class="nx">args</span><span class="p">,</span> <span class="nx">rowCallback</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span><span class="p">(</span><span class="k">typeof</span><span class="p">(</span><span class="nx">arguments</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span> <span class="o">===</span> <span class="s2">&quot;function&quot;</span><span class="p">)</span> <span class="p">{</span>
+            <span class="nx">rowCallback</span> <span class="o">=</span> <span class="nx">arguments</span><span class="p">[</span><span class="mi">2</span><span class="p">];</span>
+            <span class="nx">args</span> <span class="o">=</span> <span class="kc">undefined</span><span class="p">;</span>
+        <span class="p">}</span>
+        <span class="k">return</span> <span class="nx">select</span><span class="p">(</span><span class="nx">db</span><span class="p">,</span> <span class="nx">sqlStatement</span><span class="p">,</span> <span class="nx">args</span><span class="p">,</span> <span class="kd">function</span><span class="p">(</span><span class="nx">rs</span><span class="p">)</span> <span class="p">{</span>
+            <span class="kd">var</span> <span class="nx">row</span><span class="p">;</span>
+            <span class="k">if</span><span class="p">(</span><span class="nx">rs</span><span class="p">.</span><span class="nx">rows</span><span class="p">.</span><span class="nx">length</span> <span class="o">&gt;=</span> <span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+                <span class="nx">row</span> <span class="o">=</span> <span class="nx">rs</span><span class="p">.</span><span class="nx">rows</span><span class="p">.</span><span class="nx">item</span><span class="p">(</span><span class="mi">0</span><span class="p">);</span>
+            <span class="p">}</span>
+            <span class="k">return</span> <span class="nx">rowCallback</span> <span class="o">?</span> <span class="nx">rowCallback</span><span class="p">(</span><span class="nx">row</span><span class="p">)</span> <span class="o">:</span> <span class="nx">row</span><span class="p">;</span>
+        <span class="p">})</span>
+    <span class="p">}</span></pre></div>             </td>           </tr>                               <tr id="section-12">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-12">&#182;</a>               </div>               <h3>logVerbosity(level)</h3>
+
+<p>Sets or returns the log verbosity level</p>
+
+<p>Usage:</p>
+
+<pre><code> alert(websql.logVerbosity());
+ websql.logVerbosity(websql.DEBUG);
+</code></pre>             </td>             <td class="code">               <div class="highlight"><pre>    <span class="kd">function</span> <span class="nx">logVerbosity</span><span class="p">(</span><span class="nx">level</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span><span class="p">(</span><span class="nx">level</span> <span class="o">!==</span> <span class="nx">unknown</span><span class="p">)</span> <span class="p">{</span>
+            <span class="nx">verbosity</span> <span class="o">=</span> <span class="nx">level</span><span class="p">;</span>
+        <span class="p">}</span>
+        <span class="k">return</span> <span class="nx">verbosity</span><span class="p">;</span>
+    <span class="p">}</span></pre></div>             </td>           </tr>                               <tr id="section-13">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-13">&#182;</a>               </div>               <h2>Internal Functions</h2>             </td>             <td class="code">               <div class="highlight"><pre></pre></div>             </td>           </tr>                               <tr id="section-14">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-14">&#182;</a>               </div>               <h3>Deferred()</h3>
+
+<p>Create a Deferred object</p>             </td>             <td class="code">               <div class="highlight"><pre>    <span class="kd">function</span> <span class="nx">Deferred</span><span class="p">()</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="nx">jQuery</span><span class="p">.</span><span class="nx">Deferred</span><span class="p">();</span>
+    <span class="p">}</span></pre></div>             </td>           </tr>                               <tr id="section-15">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-15">&#182;</a>               </div>               <h3>log(level, msg1, msg2, ...)</h3>
+
+<p>Log statement unless level > verbosity</p>
+
+<p>Usage:</p>
+
+<pre><code> log(DEBUG, "Calling function", functionName);
+ log(ERROR, "Something horrible happened:", error);
+</code></pre>             </td>             <td class="code">               <div class="highlight"><pre>    <span class="kd">function</span> <span class="nx">log</span><span class="p">(</span><span class="nx">level</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span><span class="p">(</span><span class="nx">level</span> <span class="o">&lt;=</span> <span class="nx">verbosity</span><span class="p">)</span> <span class="p">{</span>
+            <span class="kd">var</span> <span class="nx">args</span> <span class="o">=</span> <span class="nb">Array</span><span class="p">.</span><span class="nx">prototype</span><span class="p">.</span><span class="nx">slice</span><span class="p">.</span><span class="nx">call</span><span class="p">(</span><span class="nx">arguments</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
+            <span class="nx">args</span><span class="p">.</span><span class="nx">unshift</span><span class="p">(</span><span class="s2">&quot;WebSQL:&quot;</span><span class="p">);</span>
+            <span class="nx">trace</span><span class="p">.</span><span class="nx">text</span><span class="p">(</span><span class="nx">args</span><span class="p">,</span> <span class="s2">&quot;color: purple&quot;</span><span class="p">);</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+
+    <span class="kd">function</span> <span class="nx">rejectError</span><span class="p">(</span><span class="nx">dfd</span><span class="p">,</span> <span class="nx">error</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span><span class="p">(</span><span class="nx">isString</span><span class="p">(</span><span class="nx">error</span><span class="p">))</span> <span class="p">{</span>
+            <span class="nx">error</span> <span class="o">=</span> <span class="p">{</span> <span class="nx">message</span> <span class="o">:</span> <span class="nx">error</span> <span class="p">};</span>
+        <span class="p">}</span>
+
+        <span class="nx">log</span><span class="p">(</span><span class="nx">ERROR</span><span class="p">,</span> <span class="s2">&quot;ERROR: &quot;</span> <span class="o">+</span> <span class="nx">error</span><span class="p">.</span><span class="nx">message</span> <span class="o">||</span> <span class="nx">error</span><span class="p">.</span><span class="nx">exception</span> <span class="o">||</span> <span class="nx">error</span><span class="p">.</span><span class="nx">sqlError</span><span class="p">);</span>
+        <span class="k">return</span> <span class="nx">dfd</span><span class="p">.</span><span class="nx">reject</span><span class="p">(</span><span class="nx">error</span><span class="p">);</span>
+    <span class="p">}</span>
+
+    <span class="kd">function</span> <span class="nx">toString</span><span class="p">(</span><span class="nx">obj</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="nb">Object</span><span class="p">.</span><span class="nx">prototype</span><span class="p">.</span><span class="nx">toString</span><span class="p">.</span><span class="nx">call</span><span class="p">(</span><span class="nx">obj</span><span class="p">);</span>  
+    <span class="p">}</span>
+
+    <span class="kd">function</span> <span class="nx">isString</span><span class="p">(</span><span class="nx">fn</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="nx">toString</span><span class="p">(</span><span class="nx">fn</span><span class="p">)</span> <span class="o">===</span> <span class="s1">&#39;[object String]&#39;</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="kd">function</span> <span class="nx">isDatabase</span><span class="p">(</span><span class="nx">db</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="nx">toString</span><span class="p">(</span><span class="nx">db</span><span class="p">)</span> <span class="o">===</span> <span class="s1">&#39;[object Database]&#39;</span><span class="p">;</span>
+    <span class="p">}</span>
+    
+    <span class="kd">function</span> <span class="nx">isFunction</span><span class="p">(</span><span class="nx">fn</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="nx">toString</span><span class="p">(</span><span class="nx">fn</span><span class="p">)</span> <span class="o">===</span> <span class="s1">&#39;[object Function]&#39;</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="kd">function</span> <span class="nx">isUndefined</span><span class="p">(</span><span class="nx">obj</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="nx">obj</span> <span class="o">===</span> <span class="k">void</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="kd">var</span> <span class="nx">isArray</span><span class="p">;</span></pre></div>             </td>           </tr>                               <tr id="section-16">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-16">&#182;</a>               </div>               <h3>initialize()</h3>             </td>             <td class="code">               <div class="highlight"><pre>    <span class="kd">function</span> <span class="nx">initialize</span><span class="p">()</span> <span class="p">{</span>
+        <span class="nx">isArray</span> <span class="o">=</span> <span class="nb">Array</span><span class="p">.</span><span class="nx">isArray</span> <span class="o">||</span> <span class="kd">function</span><span class="p">(</span><span class="nx">obj</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">return</span> <span class="nx">toString</span><span class="p">(</span><span class="nx">obj</span><span class="p">)</span> <span class="o">===</span> <span class="s1">&#39;[object Array]&#39;</span><span class="p">;</span>
+        <span class="p">};</span>
+    <span class="p">}</span>
+
+<span class="p">});</span>
+
+</pre></div>             </td>           </tr>                </tbody>     </table>   </div> </body> </html> 
