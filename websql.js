@@ -32,6 +32,7 @@ define(function(trace) {
     // * `openDatabase(name, version, displayName, estimatedSize)`
     // * `changeVersion(db, oldVersion, newVersion, xactCallback)`
     // * `getTables(db)`: `[{ name, type, sql }]`
+    // * `tableExists(db, name)`: `{name, type, sql}`
     // * `emptyDatabase(db)`
     // * `transaction(db, xactCallback)`
     // * `readTransaction(db, xactCallback)`
@@ -48,6 +49,7 @@ define(function(trace) {
         openDatabase: openDatabase,
         changeVersion: changeVersion,
         getTables: getTables,
+        tableExists: tableExists,
         emptyDatabase: emptyDatabase,
 
         transaction: transaction,
@@ -63,9 +65,13 @@ define(function(trace) {
         DEBUG: DEBUG
     };
     
-    // ### openDatabase(name, version, displayName, estimatedSize)
+    // ### openDatabase(name, _version_, _displayName_, _estimatedSize_)
     //
-    // Calls window.openDatabase()
+    // Calls window.openDatabase().
+    //
+    //	* version defaults to `""`
+    //	* displayName defaults to `name`
+    //	* estimatedSize defaults to `2 * 1024 * 1024`
     //
     // Returns: deferred promise that resolves with the opened database
     //
@@ -76,6 +82,10 @@ define(function(trace) {
     //
     function openDatabase(name, version, displayName, estimatedSize) {
         log(DEBUG, "openDatabase", name, version, displayName, estimatedSize);
+
+        if(!displayName) displayName = name;
+        if(!version) version = "";
+        if(!estimatedSize) estimatedSize = 2 * 1024 * 1024;
 
         var dfd = Deferred();
         try {
@@ -188,6 +198,28 @@ define(function(trace) {
         });
     }
 
+    // ### tableExists(db, name)
+    //
+    // Queries the sqlite_master for a table by name
+    //
+    // Returns: deferred promise that resolved with (db, table) or (db, undefined)
+    //
+    // Usage:
+    //
+    //      websql.tableExists(db, "person")
+    //          .then(function(db, table) {
+    //              alert(table ? "exists" : "does not exist");
+    //          }
+    //      });
+    //
+    function tableExists(db, name) {
+
+        var sql = "SELECT * FROM sqlite_master " +
+                    "WHERE name = ?";
+
+        return selectRow(db, sql, [name]);
+    }
+
     // ### emptyDatabase(db)
     //
     // Drops all the tables in the database.
@@ -270,7 +302,17 @@ define(function(trace) {
                 rejectError(dfd, "Database not specified (db='" + db + "')");
             } else {
                 db.transaction(function(xact) {
-                        xactCallback(xact);
+                        try {
+                            xactCallback(xact);
+                        } catch (exception) {
+                            var reason = {
+                                message: "Transaction callback threw an exception",
+                                exception: exception
+                            };
+                            log(ERROR, "transaction: exception", reason);
+                            dfd.reject(reason);
+                            log(DEBUG, "transaction: rejected");
+                        }
                     },
                     function(error) {
                         var reason = {
@@ -324,7 +366,17 @@ define(function(trace) {
                 rejectError(dfd, "Database not specified (db='" + db + "')");
             } else {
                 db.readTransaction(function(xact) {
-                        xactCallback(xact);
+                        try {
+                            xactCallback(xact);
+                        } catch (exception) {
+                            var reason = {
+                                message: "readTransaction callback threw an exception",
+                                exception: exception
+                            };
+                            log(ERROR, "readTransaction: exception", reason);
+                            dfd.reject(reason);
+                            log(DEBUG, "readTransaction: rejected");
+                        }
                     },
                     function(error) {
                         var reason = {
