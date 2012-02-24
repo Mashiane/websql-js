@@ -13,6 +13,7 @@ define([
 	"tableExists",
 	"transaction",
 	"readTransaction",
+	"execute",
 
 	], function() {
 

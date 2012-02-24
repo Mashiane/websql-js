@@ -478,22 +478,23 @@ define(function(trace) {
         }
 
         function execCommand(xact, sql, args) {
-            xact.executeSql(sqlStatement, args || [], function(xact, rs) {
+            xact.executeSql(sql, args || [], function(xact, rs) {
                 results.push(rsCallback ? rsCallback(rs) : rs);
             });                            
         }
 
         return transaction(db, function(xact) {
+            var i;
             if(isArray(sqlStatement)) {
                 for(var i = 0; i < sqlStatement.length; i++) {
                     var cmnd = sqlStatement[i];
-                    execCommand(xact, cmnd.sql, isUndefined(cmnd.args)
-                                            ? args : cmnd.args);
+                    var params = isUndefined(cmnd.args) ? args : cmnd.args;
+                    execCommand(xact, cmnd.sql, params);
                 }
             } else {
                 var argSets = isArray(args) && isArray(args[0])
                         ? args : [args];
-                for(var i = 0; i < argSets.length; i++) {
+                for(i = 0; i < argSets.length; i++) {
                     execCommand(xact, sqlStatement, argSets[i]);
                 }
             }
@@ -501,7 +502,8 @@ define(function(trace) {
             results.unshift(db);
             return Deferred().resolveWith(ctx, results);
         }, function(err) {
-            err.sql = sqlStatement
+            err.sql = sqlStatement;
+            return err;
         })
     }
 
