@@ -40,7 +40,7 @@ define(["websql", "jquery"], function(websql, $) {
 	}
 
 	function unexpected_error(error) {
-		equal(error, null, "unexpected error: " + error);
+		ok(false, "unexpected error: " + JSON.stringify(error));
 		return $.Deferred().resolve(exports.db);
 	}
 
