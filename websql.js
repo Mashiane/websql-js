@@ -1,7 +1,8 @@
-// websql.js
+//      websql.js
 //
-// (c) 2012 Stepan Riha
-//
+//      (c) 2012 Stepan Riha
+//      websql.js may be freely distributed under the MIT license.
+
 // Module that wraps asynchronous WebSQL calls with jQuery's Deferred promises.
 //
 // Promises are **resolved** with the database as the first value.
@@ -18,10 +19,11 @@
 define(function(trace) {
     
     var db;
+    var NONE = 0;
     var ERROR = 1;
     var DEBUG = 2;
 
-    var verbosity = DEBUG;
+    var verbosity = NONE;
     var trace = console;
 
     initialize();
@@ -40,8 +42,9 @@ define(function(trace) {
     // * `select(db, sqlStatement, args, rsCallback)`: `rsCallback()` or `resultSet`
     // * `selectRow(db, sqlStatement, args, rowCallback)`: `rowCallback()` or `row`
     // * `logVerbosity(level)`: `level`
-    // * `ERROR`
-    // * `DEBUG`
+    // * `NONE` - no logging
+    // * `ERROR` - log errors
+    // * `DEBUG` - log debug info
 
     return  {
         logVerbosity: logVerbosity,
@@ -61,6 +64,7 @@ define(function(trace) {
 
         logVerbosity: logVerbosity,
         setConsole: setConsole,
+        NONE: NONE,
         ERROR: ERROR,
         DEBUG: DEBUG
     };
@@ -78,6 +82,11 @@ define(function(trace) {
     // Usage:
     //
     //      websql.openDatabase("test", "Test Database", 2 * 1024 * 1024))
+    //          .then(function(db) {...});
+    //
+    // More usage:
+    //
+    //      websql.openDatabase("test"))
     //          .then(function(db) {...});
     //
     function openDatabase(name, version, displayName, estimatedSize) {
@@ -170,7 +179,7 @@ define(function(trace) {
     //
     // Queries the sqlite_master table for user tables
     //
-    // Returns: deferred promise that resolved with an array of table information records
+    // Returns: deferred promise that resolves with an array of table information records
     //
     // Usage:
     //
@@ -202,7 +211,7 @@ define(function(trace) {
     //
     // Queries the sqlite_master for a table by name
     //
-    // Returns: deferred promise that resolved with (db, table) or (db, undefined)
+    // Returns: deferred promise that resolves with (db, table) or (db, undefined)
     //
     // Usage:
     //
@@ -224,7 +233,7 @@ define(function(trace) {
     //
     // Drops all the tables in the database.
     //
-    // Returns: deferred promise that resolved with the emptied database
+    // Returns: deferred promise that resolves with the emptied database
     //
     // Usage:
     //
@@ -249,7 +258,7 @@ define(function(trace) {
     //
     // Calls xactCallback(xact) from within a database transaction
     //
-    // Returns: deferred promise that resolved with the database
+    // Returns: deferred promise that resolves with the database
     //
     // Usage:
     //
@@ -347,7 +356,7 @@ define(function(trace) {
     //
     // Calls xactCallback(xact) from within a database read transaction
     //
-    // Returns: deferred promise that resolved with the database
+    // Returns: deferred promise that resolves with the database
     //
     // Usage:
     //
@@ -414,10 +423,10 @@ define(function(trace) {
     //
     // The `args` and `rsCallback` are optional.
     //
-    // * Passing a _single_ `sqlStatement` with `args` that are an _array of arrays_,
+    // * Passing a _single_ `sqlStatement` string with `args` that is an _array of arrays_,
     // the statement is executed with each row in the `args`.
     // * Passing an array of `{ sql, args}` objects to `sqlStatement`
-    // executes the `sql` in each row with the row's `args` or the parameter `args`.
+    // executes the `sql` in each row with the row's `args` (or the execut parameter `args`).
     //
     // Returns: deferred promise that resolves with the database and `rsCallback` result(s)
     // or the resultSet(s), if no `rsCallback` specified.
@@ -446,6 +455,7 @@ define(function(trace) {
     //                      ["John", "Doe"],
     //                      ["Jane", "Doe"]
     //                  ],
+    //                  // called for each row in args
     //                  function(rs) {
     //                      console.log("Inserted person", rs.insertId);
     //                      return rs.insertId;
@@ -463,6 +473,7 @@ define(function(trace) {
     //                      args: ["Sesame St.", "Austin", "78758", 45]
     //
     //                  }],
+    //                  // called for each object in args
     //                  function(rs) {
     //                      console.log("Updated object: ", rs.rowsAffected);
     //                      return rs.rowsAffected;
@@ -507,7 +518,7 @@ define(function(trace) {
         })
     }
 
-    // ### select(db, sqlStatement, _args_, _rsCallback_)
+    // ### select(db, sqlStatement(s), _args(s)_, _rsCallback_)
     //
     // Convenience method for executing a readTransaction with a single `sqlStatement`
     // with the specified `args`.
@@ -539,20 +550,72 @@ define(function(trace) {
     //                  ["Bob"]
     //      ).then(function(db, resultSet) {...});
     //
-    function select(db, sqlStatement, args, rsCallback) {
-        var result;
+    // Other Usage: (single `sqlStatement` with multiple sets of `args`)
+    //
+    //      websql.execute(db,
+    //                  "SELECT * FROM person WHERE first = ?",
+    //                  [
+    //                      ["Bob"],
+    //                      ["John"]
+    //                  ],
+    //                  // called for each row in args
+    //                  function(rs) {
+    //                      return rs.rows;
+    //                  }
+    //      ).then(function(db, bobRows, johnRows) {...});
+    //
+    // Other Usage: (multiple `sqlStatement` with multiple sets of `args`)
+    //
+    //      websql.execute(db,
+    //                  [{
+    //                      sql: "SELECT * FROM person WHERE id=?",
+    //                      args: [23]
+    //                  }, {
+    //                      sql: "SELECT * FROM address WHERE state in (?, ?, ?)",
+    //                      args: ["CA", "FL", "TX"]
+    //
+    //                  }],
+    //                  // called for each object in args
+    //                  function(rs) {
+    //                      return rs.rows;
+    //                  }
+    //      ).then(function(db, person23rows, addressRows) {...});
+    //
+  function select(db, sqlStatement, args, rsCallback) {
+        var results = [];
+        var ctx = this;
         if(typeof(arguments[2]) === "function") {
             rsCallback = arguments[2];
             args = undefined;
         }
+
+        function execCommand(xact, sql, args) {
+            xact.executeSql(sql, args || [], function(xact, rs) {
+                results.push(rsCallback ? rsCallback(rs) : rs);
+            });                            
+        }
+
         return readTransaction(db, function(xact) {
-            xact.executeSql(sqlStatement, args, function(xact, rs) {
-                result = rsCallback ? rsCallback(rs) : rs;
-            });
+            var i;
+            if(isArray(sqlStatement)) {
+                for(var i = 0; i < sqlStatement.length; i++) {
+                    var cmnd = sqlStatement[i];
+                    var params = isUndefined(cmnd.args) ? args : cmnd.args;
+                    execCommand(xact, cmnd.sql, params);
+                }
+            } else {
+                var argSets = isArray(args) && isArray(args[0])
+                        ? args : [args];
+                for(i = 0; i < argSets.length; i++) {
+                    execCommand(xact, sqlStatement, argSets[i]);
+                }
+            }
         }).pipe(function(db) {
-            return Deferred().resolve(db, result);
+            results.unshift(db);
+            return Deferred().resolveWith(ctx, results);
         }, function(err) {
-            err.sql = sqlStatement
+            err.sql = sqlStatement;
+            return err;
         })
     }
 
