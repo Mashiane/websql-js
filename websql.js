@@ -148,8 +148,8 @@ define(function(trace) {
 
         var dfd = Deferred();
         try {
-            if(!isDatabase(db)) {
-                rejectError(dfd, "Database not specified (db='" + db + "')");
+            if(!_isDatabase(db)) {
+                _rejectError(dfd, "Database not specified (db='" + db + "')");
             } else {
                 db.changeVersion(oldVersion, newVersion, xactCallback,
                     function(error) {
@@ -307,8 +307,8 @@ define(function(trace) {
         log(DEBUG, "transaction: in");
 
         try {
-            if(!isDatabase(db)) {
-                rejectError(dfd, "Database not specified (db='" + db + "')");
+            if(!_isDatabase(db)) {
+                _rejectError(dfd, "Database not specified (db='" + db + "')");
             } else {
                 db.transaction(function(xact) {
                         try {
@@ -371,8 +371,8 @@ define(function(trace) {
         log(DEBUG, "readTransaction: in");
 
         try {
-            if(!isDatabase(db)) {
-                rejectError(dfd, "Database not specified (db='" + db + "')");
+            if(!_isDatabase(db)) {
+                _rejectError(dfd, "Database not specified (db='" + db + "')");
             } else {
                 db.readTransaction(function(xact) {
                         try {
@@ -496,14 +496,14 @@ define(function(trace) {
 
         return transaction(db, function(xact) {
             var i;
-            if(isArray(sqlStatement)) {
+            if(_isArray(sqlStatement)) {
                 for(var i = 0; i < sqlStatement.length; i++) {
                     var cmnd = sqlStatement[i];
-                    var params = isUndefined(cmnd.args) ? args : cmnd.args;
+                    var params = _isUndefined(cmnd.args) ? args : cmnd.args;
                     execCommand(xact, cmnd.sql, params);
                 }
             } else {
-                var argSets = isArray(args) && isArray(args[0])
+                var argSets = _isArray(args) && _isArray(args[0])
                         ? args : [args];
                 for(i = 0; i < argSets.length; i++) {
                     execCommand(xact, sqlStatement, argSets[i]);
@@ -597,14 +597,14 @@ define(function(trace) {
 
         return readTransaction(db, function(xact) {
             var i;
-            if(isArray(sqlStatement)) {
+            if(_isArray(sqlStatement)) {
                 for(var i = 0; i < sqlStatement.length; i++) {
                     var cmnd = sqlStatement[i];
-                    var params = isUndefined(cmnd.args) ? args : cmnd.args;
+                    var params = _isUndefined(cmnd.args) ? args : cmnd.args;
                     execCommand(xact, cmnd.sql, params);
                 }
             } else {
-                var argSets = isArray(args) && isArray(args[0])
+                var argSets = _isArray(args) && _isArray(args[0])
                         ? args : [args];
                 for(i = 0; i < argSets.length; i++) {
                     execCommand(xact, sqlStatement, argSets[i]);
@@ -708,9 +708,9 @@ define(function(trace) {
         if(level <= verbosity && trace) {
             var args = Array.prototype.slice.call(arguments, 1);
             args.unshift("WebSQL:");
-            if(isFunction(trace.text)) {
+            if(_isFunction(trace.text)) {
                 trace.text(args, "color: purple");
-            } else if(isFunction(trace.log)) {
+            } else if(_isFunction(trace.log)) {
                 trace.log(args.join(' '));
             }
         }
@@ -720,8 +720,8 @@ define(function(trace) {
         trace = console;
     }
 
-    function rejectError(dfd, error) {
-        if(isString(error)) {
+    function _rejectError(dfd, error) {
+        if(_isString(error)) {
             error = { message : error };
         }
 
@@ -729,33 +729,33 @@ define(function(trace) {
         return dfd.reject(error);
     }
 
-    function toString(obj) {
+    function _toString(obj) {
         return Object.prototype.toString.call(obj);  
     }
 
-    function isString(fn) {
-        return toString(fn) === '[object String]';
+    function _isString(fn) {
+        return _toString(fn) === '[object String]';
     }
 
-    function isDatabase(db) {
-        return toString(db) === '[object Database]';
+    function _isDatabase(db) {
+        return _toString(db) === '[object Database]';
     }
     
-    function isFunction(fn) {
-        return toString(fn) === '[object Function]';
+    function _isFunction(fn) {
+        return _toString(fn) === '[object Function]';
     }
 
-    function isUndefined(obj) {
+    function _isUndefined(obj) {
         return obj === void 0;
     }
 
-    var isArray;
+    var _isArray;
 
     // ### initialize()
     //
     function initialize() {
-        isArray = Array.isArray || function(obj) {
-            return toString(obj) === '[object Array]';
+        _isArray = Array.isArray || function(obj) {
+            return _toString(obj) === '[object Array]';
         };
     }
 
