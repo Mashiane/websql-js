@@ -1,4 +1,4 @@
-//      websql.js
+//      websql.js 0.1.0
 //
 //      (c) 2012 Stepan Riha
 //      websql.js may be freely distributed under the MIT license.
@@ -16,7 +16,15 @@
 // * `sql`: statement that was executing
 // * `message`: Describing what failed
 
-define(function(trace) {
+(function (root, factory) {
+    if (typeof define === 'function' && define.amd) {
+        // When used as AMD, register as an anonymous module.
+        define(['jquery'], factory);
+    } else {
+        // Otherwise create browser global `websql`
+        root.websql = factory(root.jQuery);
+    }
+}(this, function($) {
     
     var db;
     var NONE = 0;
@@ -692,7 +700,7 @@ define(function(trace) {
     // Create a Deferred object
     //
     function Deferred() {
-        return jQuery.Deferred();
+        return $.Deferred();
     }
 
     // ### log(level, msg1, msg2, ...)
@@ -757,6 +765,9 @@ define(function(trace) {
         _isArray = Array.isArray || function(obj) {
             return _toString(obj) === '[object Array]';
         };
+
+        // Default to global `jQuery` if no $    
+        $ = $ || jQuery;
     }
 
-});
+}));
