@@ -14,6 +14,7 @@ define([
 	"transaction",
 	"readTransaction",
 	"execute",
+	"select",
 
 	], function() {
 
