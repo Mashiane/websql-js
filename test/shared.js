@@ -11,25 +11,20 @@ define(["websql", "jquery"], function(websql, $) {
 		if(nodb)
 			return $.Deferred().fail("no db");
 		
-		console.log("reset_db: ...")
 		var db = window.openDatabase(db_name, "", db_name, 2 * 1024 * 1024);
 
 		if(db.version) {
-			console.log("reset_db: changing version from " + db.version + "...");
 			return db.changeVersion(db.version, "", function(xact) {
 				xact.executeSql("SELECT name FROM sqlite_master WHERE name LIKE 'test_%'", [],
 					function tables(xact, rs) {
 						var rows = rs.rows;
 						for(var i = 0; i < rows.length; i++) {
-							console.log("Dropping " + rows.item(i).name);
 							xact.executeSql("DROP TABLE " + rows.item(i).name);
 						}
 					})
 			}, console_error, function() {
-				console.log("reset_db: version changed")
 			});
 		} else {
-			console.log("reset_db: nothing to do");
 			return $.Deferred().resolve(db);
 		}
 	}
