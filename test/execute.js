@@ -2,7 +2,7 @@ define(["websql", "shared"], function(websql, shared) {
 	
 	asyncTest("execute", 19, function execute() {
 
-		var johnId, georgeId;
+		var johnId, georgeId, paulId, ringoId;
 
 		var promise = shared.begin_test("1.0");
 
